@@ -1,0 +1,6 @@
+# Install in a separate Python 3.12 environment; see scripts/install_modern.py.
+# ONNX uses CPU; PyTorch still selects Apple MPS or CUDA for Roformer models.
+audio-separator[cpu]==0.47.1
+# audio-separator imports audioread directly; librosa 1.x no longer installs it.
+audioread==3.1.0
+imageio-ffmpeg==0.6.0

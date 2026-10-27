@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.venv-modern/
+.pytest_cache/
+models/Modern_Models/
+separated/
+modern_outputs/
+.venv-mac-build/
+build/
+dist/

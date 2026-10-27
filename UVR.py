@@ -39,6 +39,7 @@ from gui_data.constants import *
 from gui_data.app_size_values import *
 from gui_data.error_handling import error_text, error_dialouge
 from gui_data.old_data_check import file_check, remove_unneeded_yamls, remove_temps
+from gui_data.modern_models_dialog import open_modern_models
 from gui_data.tkinterdnd2 import TkinterDnD, DND_FILES
 from lib_v5.vr_network.model_param_init import ModelParameters
 from kthread import KThread
@@ -3192,6 +3193,13 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         option_menu['values'] = option_list
         option_menu.update_dropdown_size(option_list, menu_name)
 
+    def menu_modern_models(self):
+        """Open the optional isolated engine for newer model architectures."""
+        return open_modern_models(
+            self, inputs=self.inputPaths, output_dir=self.export_path_var.get(),
+            app_dir=BASE_PATH,
+            busy_callback=lambda: self.thread_check(self.active_processing_thread))
+
     def menu_settings(self, select_tab_2=False, select_tab_3=False):#**
         """Open Settings and Download Center"""
 
@@ -3209,6 +3217,16 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
         tabControl.add(tab1, text = SETTINGS_GUIDE_TEXT)
         tabControl.add(tab2, text = ADDITIONAL_SETTINGS_TEXT)
         tabControl.add(tab3, text = DOWNLOAD_CENTER_TEXT)
+        modern_tab = ttk.Frame(tabControl, padding=20)
+        tabControl.add(modern_tab, text="Modern Models")
+        ttk.Label(modern_tab, text="BS-Roformer and Mel-Band Roformer",
+                  wraplength=320, justify="center").pack(pady=(15, 10))
+        ttk.Label(modern_tab, text="Separate vocals, instrumentals, and other stems with the optional modern engine. Your current input and output selections carry over.",
+                  wraplength=320, justify="center").pack(pady=10)
+        ttk.Button(modern_tab, text="Open Modern Models",
+                   command=self.menu_modern_models).pack(pady=15)
+        ttk.Label(modern_tab, text="First install: python3.12 scripts/install_modern.py\nSee README.md for Windows and GPU setup.",
+                  wraplength=320, justify="center").pack(pady=10)
 
         tabControl.pack(expand = 1, fill ="both")
         
@@ -6183,6 +6201,11 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
 
     def process_initialize(self):
         """Verifies the input/output directories are valid and prepares to thread the main process."""
+
+        modern_dialog = getattr(self, "_modern_models_dialog", None)
+        if modern_dialog is not None and modern_dialog.winfo_exists() and modern_dialog.is_running:
+            self.error_dialoge(["Modern models", "Wait for the modern model job to finish before starting another UVR job."])
+            return
         
         if not (
             self.chosen_process_method_var.get() == AUDIO_TOOLS 
@@ -7134,6 +7157,11 @@ class MainWindow(TkinterDnD.Tk if is_dnd_compatible else tk.Tk):
 
         if app_close:
             save_data(data={**main_settings, **other_data})
+
+            modern_dialog = getattr(self, "_modern_models_dialog", None)
+            if modern_dialog is not None and modern_dialog.winfo_exists() and modern_dialog.is_running:
+                self.error_dialoge(["Modern models", "Cancel the modern model job or wait for it to finish before closing UVR."])
+                return
             
             if self.thread_check(self.active_download_thread):
                 self.error_dialoge(EXIT_DOWNLOAD_ERROR)

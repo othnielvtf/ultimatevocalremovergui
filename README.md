@@ -18,6 +18,123 @@ This application uses state-of-the-art source separation models to remove vocals
 - **Support the Project**
     - [Donate](https://www.buymeacoffee.com/uvr5)
 
+## Modern separation models (optional)
+
+This source checkout adds a **Modern Models** window alongside the original UVR
+engines, powered by [audio-separator](https://github.com/nomadkaraoke/python-audio-separator).
+Open **Settings → Modern Models → Open Modern Models**, or launch the window
+independently using the commands below. This is an extension to this checkout;
+the official UVR version remains 5.6.
+
+- **BS-Roformer and Mel-Band Roformer** presets for vocals, instrumental, karaoke,
+  denoising, dereverb, and multiple instrument stems.
+- Automatic checkpoint/configuration downloads into a persistent cache, plus
+  custom filenames from the backend's model catalog.
+- Batch files or recursive folders, WAV/FLAC/MP3 output, optional single-stem
+  export, overlap control, live logs, and cancellation.
+- Automatic CUDA / Apple MPS / CPU selection, or forced CPU processing.
+- Each input gets a fresh output subfolder, including repeated runs and files
+  with the same name, to prevent overwrites.
+
+### Packaged Mac app
+
+**UVR Modern.app** packages the modern separation window, Python 3.12, the
+separation engine, Tcl/Tk, and FFmpeg in a standalone Mac application. This build
+supports **Apple Silicon and macOS 14 or newer**. Launch it from Applications;
+it does not need this checkout, a virtual environment, or Terminal.
+
+The build produces `dist/UVR Modern.app` and optionally
+`dist/UVR-Modern-1.0.0-arm64.dmg`. The disk image supports dragging the app into
+Applications. Model weights download when selected and are kept outside the app:
+
+- Models: `~/Library/Application Support/UVRModern/models`
+- Preferences: `~/Library/Application Support/UVRModern/preferences.json`
+- Logs: `~/Library/Logs/UVRModern/app.log`
+- Default audio output: `~/Downloads/UVR Separated`
+
+To rebuild on an Apple Silicon Mac with Xcode Command Line Tools installed:
+
+```bash
+.venv-modern/bin/python scripts/build_macos.py --install --migrate-models --dmg
+```
+
+Run `scripts/install_modern.py` first if the runtime has not been installed.
+The builder copies a relocatable uv-managed Python 3.12 and its installed engine,
+compiles a native Cocoa launcher, signs the bundle, and checks its GUI/worker
+runtime and signature. `--migrate-models` reuses already downloaded model files.
+It preserves an existing application and build output; choose another `--dist`
+or `--applications` folder when rebuilding alongside an existing copy.
+
+This local build uses an ad-hoc signature. Public distribution with Apple
+notarization requires a Developer ID and a separate release-signing process.
+
+### Install the isolated modern engine
+
+Use **Python 3.12** (3.11 or newer is required by the installation helper). Run
+from this repository:
+
+```bash
+# macOS / Linux
+python3.12 scripts/install_modern.py
+
+# Windows
+py -3.12 scripts/install_modern.py
+```
+
+If you use [uv](https://docs.astral.sh/uv/), the equivalent is
+`uv run --python 3.12 scripts/install_modern.py`.
+
+The helper creates `.venv-modern`, installs the pinned backend and a bundled
+FFmpeg, and checks the installation. Keep this environment separate from the
+original `requirements.txt`: the modern engine requires newer NumPy, librosa,
+and PyTorch versions. Apple Silicon uses MPS automatically; this backend's
+current PyTorch requirements need **macOS 14 or newer** on Apple Silicon.
+For NVIDIA ONNX acceleration on Windows/Linux, add `--gpu` to the installation
+command and install a compatible CUDA-enabled PyTorch build if needed. Roformer
+models use PyTorch; installing the CPU ONNX extra does not disable their GPU use.
+
+To launch the modern window without installing the old UVR dependencies:
+
+```bash
+# macOS / Linux
+.venv-modern/bin/python -m gui_data.modern_models_dialog
+
+# Windows
+.venv-modern\Scripts\python.exe -m gui_data.modern_models_dialog
+```
+
+The window detects `.venv-modern` automatically. For a different environment,
+select its Python executable in the window or set `UVR_MODERN_PYTHON`. Tkinter is
+needed by the window; install your platform's Python Tk support if it is missing.
+Preferences are saved in `~/.uvr/modern_models.json`.
+
+### Command line
+
+```bash
+.venv-modern/bin/python modern_models.py --list-presets
+.venv-modern/bin/python modern_models.py --list-models
+.venv-modern/bin/python modern_models.py --preset melband-vocals --output-dir separated song.wav
+.venv-modern/bin/python modern_models.py --preset bs-dereverb --download-only
+```
+
+Use `--model FILENAME` for another supported catalog model, `--device cpu` to
+force CPU processing, `--single-stem Vocals` to export only that stem, and
+`--output-format FLAC` or `MP3` for other formats. Stem names depend on the model.
+Leave overlap blank to use its trained configuration; higher values take longer.
+For a faster first pass on a supported Apple or NVIDIA GPU, use `--overlap 2`
+and `--native-fp16` (the window also offers a GPU float16 option). CPU mode
+keeps float32 precision.
+First use downloads the selected weights and configuration and can require over
+1 GB per model. Audio processing runs locally. Modern jobs have their own Cancel
+button and cannot run at the same time as a legacy UVR separation job. This
+window does not apply the legacy ensemble or secondary-model settings.
+
+Run the focused regression suite without installing the ML stack:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
 ## Installation
 
 These bundles contain the UVR interface, Python, PyTorch, and other dependencies needed to run the application effectively. No prerequisites are required.
