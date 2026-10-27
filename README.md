@@ -13,6 +13,10 @@ with an isolated modern engine powered by [audio-separator](https://github.com/n
 **UVR Modern 1.1.0** packages the new separation studio. The original interface
 and its VR, MDX-Net/MDX23C, and Demucs engines remain available through `UVR.py`.
 
+![UVR Modern DAW-style studio showing original, vocal, and instrumental waveforms, playback controls, and the separation inspector](docs/images/uvr-modern-studio.jpg)
+
+*UVR Modern 1.1.0 on macOS, with a song and its separated stems loaded for audition.*
+
 - [DAW-style studio](#daw-style-studio)
 - [Use the Mac app](#use-the-mac-app)
 - [Model presets](#model-presets)
@@ -122,8 +126,9 @@ The packaged **UVR Modern.app** supports **Apple Silicon and macOS 14 or newer**
 It includes Python 3.12, Tcl/Tk, the separation engine and its dependencies, and
 FFmpeg. It runs independently of this repository and its virtual environment.
 
-1. Open a locally built `UVR-Modern-1.1.0-arm64.dmg` and drag **UVR Modern.app**
-   into **Applications**, or use the builder's `--install` option.
+1. Download the DMG from the [UVR Modern 1.1.0 Mac preview release](https://github.com/othnielvtf/ultimatevocalremovergui/releases/tag/modern-v1.1.0),
+   or [build it locally](#build-the-mac-app). Open `UVR-Modern-1.1.0-arm64.dmg`
+   and drag **UVR Modern.app** into **Applications**.
 2. Launch **UVR Modern** from Applications.
 3. Follow [Load, separate, and audition](#load-separate-and-audition) to start a
    studio session and compare the resulting tracks.
