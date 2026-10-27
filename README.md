@@ -107,7 +107,7 @@ Run commands from the repository root:
 
 ```bash
 # Recommended with uv, including the relocatable runtime needed by the Mac builder
-uv run --python 3.12 scripts/install_modern.py
+uv run --managed-python --python 3.12 scripts/install_modern.py
 
 # Alternatively, with an existing Python 3.12 installation on macOS / Linux
 python3.12 scripts/install_modern.py
@@ -200,11 +200,15 @@ Build on an **Apple Silicon Mac**, using a **relocatable uv-managed Python 3.12*
 runtime and **Xcode Command Line Tools**. Prepare the engine first:
 
 ```bash
-uv run --python 3.12 scripts/install_modern.py
+uv run --managed-python --python 3.12 scripts/install_modern.py
 
 # Build the app and a disk image, reusing already downloaded model files
 .venv-modern/bin/python scripts/build_macos.py --migrate-models --dmg
 ```
+
+The setup helper reuses an existing `.venv-modern`. For packaging, that
+environment must have been created with the uv-managed Python above; rerunning
+setup does not change an existing environment’s Python distribution.
 
 The builder copies the standalone Python runtime and installed engine, compiles
 a native Cocoa launcher, and signs the bundle. Its self-test checks the embedded
@@ -257,8 +261,8 @@ cancellation, environment isolation, and packaged-app paths.
 ```
 
 The tests need Python with Tkinter support but do not download models or require
-the ML stack. CI runs the regression suite on Python 3.9 and 3.12; the modern
-runtime installer still requires Python 3.11 or newer.
+the ML stack. CI is configured to run the suite on Python 3.9 and 3.12; the
+modern runtime installer still requires Python 3.11 or newer.
 
 Manual checks completed for the Mac build:
 
