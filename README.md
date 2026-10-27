@@ -1,15 +1,19 @@
 # UVR Modern
 
-Local audio separation with **BS-Roformer and Mel-Band Roformer**, a standalone
-Mac application, and a command-line worker. Extract vocals and instrumentals,
-prepare karaoke tracks, or use specialized denoise, dereverb, and instrument
-separation models.
+A local audio separation studio with a **DAW-style workspace**, real waveform
+tracks, playback controls, and **BS-Roformer / Mel-Band Roformer** models. Extract
+vocals and instrumentals, compare stems on a shared timeline, prepare karaoke
+tracks, or use specialized denoise, dereverb, and instrument separation models.
+
+Available as a standalone Apple Silicon Mac app, a source-launched studio window,
+and a command-line worker.
 
 This checkout extends [Ultimate Vocal Remover GUI 5.6](https://github.com/Anjok07/ultimatevocalremovergui)
 with an isolated modern engine powered by [audio-separator](https://github.com/nomadkaraoke/python-audio-separator).
-**UVR Modern 1.0.0** is the packaged modern-model window. The original interface
+**UVR Modern 1.1.0** packages the new separation studio. The original interface
 and its VR, MDX-Net/MDX23C, and Demucs engines remain available through `UVR.py`.
 
+- [DAW-style studio](#daw-style-studio)
 - [Use the Mac app](#use-the-mac-app)
 - [Model presets](#model-presets)
 - [Run from source](#run-from-source)
@@ -22,6 +26,11 @@ and its VR, MDX-Net/MDX23C, and Demucs engines remain available through `UVR.py`
 
 ## What has been added
 
+- A dark DAW-style workspace with color-coded waveform lanes, an elapsed-time ruler,
+  playhead, zoom, session library, and a model/export inspector.
+- Play, pause, stop, seek, monitor gain, and stereo output meters. Switch between
+  the original and separated stems at the same timeline position, one at a time.
+- Import existing stems into a session or populate tracks from a new separation.
 - Eight model presets for vocals, instrumentals, karaoke, denoising, dereverb,
   and six-stem separation, plus custom model filenames from the backend catalog.
 - A modern-model window that runs independently or opens from the original
@@ -40,20 +49,86 @@ Audio separation runs locally. Internet access is used to retrieve the model
 catalog and any missing weights or configuration files. Some checkpoints require
 more than 1 GB of storage each.
 
+## DAW-style studio
+
+The studio places the audio timeline in the center, session files on the left,
+and separation/export settings in a right-hand inspector. Flat controls, a dark
+palette, and color-coded clips make the original and generated stems easy to
+identify.
+
+| Area | Features |
+| --- | --- |
+| **Session files** | Add audio files or recursive folders, select the original to inspect, and manage the batch input list. |
+| **Arrangement** | Real waveform lanes, an elapsed-time ruler, a moving playhead, horizontal zoom/pan, and vertical scrolling for additional stems. |
+| **Track lanes** | Teal for the original, violet for vocals, amber for instrumental; additional instrument stems receive their own lanes. Empty lanes show placeholders until files exist. |
+| **Transport** | Play/pause, stop, return to start, millisecond time display, and click/drag seeking. |
+| **Monitor** | Playback gain and L/R peak meters driven by actual preview output. Monitor gain affects audition volume, not exported files. |
+| **Inspector** | Model presets, device, overlap, float16, output format, optional single-stem output, and output folder. Scroll to reach export and advanced options. |
+| **Activity** | Live worker messages, saved output paths, engine status, and batch completion progress. |
+
+### Load, separate, and audition
+
+1. Choose **Add audio** or **+ Files** to add a song, or **Folder** to add a batch.
+2. Select a file in **Session files**. Its duration, sample rate, channel layout,
+   and waveform appear after analysis; **Play** becomes available.
+3. Pick a model in the inspector. Choose **WAV**, **FLAC**, or **MP3**, and use
+   **Choose output folder…** to set the export destination.
+4. Click **Separate audio**. Completed stems appear automatically in the
+   arrangement, with waveforms drawn from the generated files.
+5. Click a loaded track's **header** to audition that stem at the current
+   playhead position. Switching tracks preserves whether playback is running.
+   Click or drag inside a waveform to seek to a different position.
+6. Use **Reveal exports** to open the output folder, or inspect the saved paths
+   in **Activity**.
+
+To compare existing results, select the original audio first, click **Import
+stems**, and select its previously separated audio files. Imports replace the
+selected original's attached stem list and do not rerun separation. Track labels
+are inferred from the filenames; Kim FT2's `other` output is shown as
+**Instrumental** for a two-stem result.
+
+### Timeline and transport controls
+
+| Control | Action |
+| --- | --- |
+| **Space** | Play/pause when the arrangement timeline has focus. Click a loaded lane to focus it; text fields retain normal typing. |
+| **Play / pause** | Start or pause the active track. Only one track is auditioned at a time. |
+| **Stop** | Stop playback and return to the beginning. |
+| **Return to start** | Move the playhead to zero without changing the current play/pause state. |
+| **Track header** | Select a loaded original or stem while keeping the timeline position. |
+| **Waveform click / drag** | Seek within the selected audio. |
+| **Fit / − / +** | Reset the view or change horizontal zoom from 100% to 400%. |
+| **Shift + scroll** | Pan a zoomed timeline horizontally. |
+| **Scroll over tracks** | Reveal more lanes when they exceed the available height. |
+| **Monitor slider** | Adjust preview volume; the stereo meters follow the output level. |
+
+**Advanced settings…** contains the custom model filename, model cache, external
+model-catalog link, and Python interpreter selection for source launches. The
+packaged app selects its bundled interpreter automatically.
+
+Waveforms use real audio analyzed in bounded blocks. Preview uses an isolated
+streaming worker with SoundFile and sounddevice, plays through the default output
+device, and does not open a microphone. Preview is stereo: mono audio is played
+through both channels, and multichannel audio uses its first two channels. The
+ruler displays elapsed time; no song tempo is inferred.
+
+Settings such as the model and export folder are saved. The current input list,
+attached stems, and playhead are in-memory session state; saving/reopening studio
+projects is not implemented.
+
 ## Use the Mac app
 
 The packaged **UVR Modern.app** supports **Apple Silicon and macOS 14 or newer**.
 It includes Python 3.12, Tcl/Tk, the separation engine and its dependencies, and
 FFmpeg. It runs independently of this repository and its virtual environment.
 
-1. Open a locally built `UVR-Modern-1.0.0-arm64.dmg` and drag **UVR Modern.app**
+1. Open a locally built `UVR-Modern-1.1.0-arm64.dmg` and drag **UVR Modern.app**
    into **Applications**, or use the builder's `--install` option.
 2. Launch **UVR Modern** from Applications.
-3. Choose a preset and use **Add files…** or **Add folder…** to select audio.
-4. Choose an output folder and format, then click **Separate audio**.
-5. Read the saved paths in the log when processing completes.
+3. Follow [Load, separate, and audition](#load-separate-and-audition) to start a
+   studio session and compare the resulting tracks.
 
-**Download model only** caches a model before processing. On first use, weights
+**Download model** caches a model before processing. On first use, weights
 and configuration files download automatically. Model weights are stored in your
 user Library, outside the app bundle, so they can be reused across app builds.
 
@@ -67,7 +142,7 @@ Build outputs are generated locally and ignored by Git:
 | Artifact | Default path |
 | --- | --- |
 | Standalone application | `dist/UVR Modern.app` |
-| Optional disk image | `dist/UVR-Modern-1.0.0-arm64.dmg` |
+| Optional disk image | `dist/UVR-Modern-1.1.0-arm64.dmg` |
 | Installed application with `--install` | `/Applications/UVR Modern.app` |
 
 See [Build the Mac app](#build-the-mac-app) to generate these artifacts. The
@@ -90,9 +165,10 @@ with notarization requires a Developer ID and a separate release-signing process
 | `bs-dereverb` | BS-Roformer De-reverb | Reverb separation |
 | `bs-six-stem` | BS-Roformer SW by jarredou | Vocals, drums, bass, guitar, piano, and other |
 
-Use **Model filename** for another supported catalog entry. **Browse model
-catalog…** opens the external catalog; a searchable catalog inside the window
-has not been implemented. The CLI also provides `--list-models`.
+Use **Advanced settings → Model filename** for another supported catalog entry.
+**Browse model catalog** in that dialog opens the external catalog; a searchable
+catalog inside the window has not been implemented. The CLI also provides
+`--list-models`.
 
 Output stem names depend on the model. With the default Kim FT2 preset,
 `(vocals)` is the vocal track and `(other)` is the instrumental track. The preset
@@ -121,8 +197,8 @@ py -3.12 scripts/install_modern.py
 
 The helper creates `.venv-modern`, installs the pinned dependencies, supplies
 FFmpeg, and checks the engine. The backend is pinned to **audio-separator 0.47.1**;
-[audioread](requirements-modern.txt) and the bundled FFmpeg dependency are also
-specified explicitly.
+[audioread](requirements-modern.txt), bundled FFmpeg, and **sounddevice 0.5.6**
+for audio preview are also specified explicitly.
 
 Keep `.venv-modern` separate from the original `requirements.txt` environment:
 the modern engine uses newer NumPy, librosa, and PyTorch dependencies.
@@ -252,23 +328,28 @@ The source window and packaged app use separate preference files.
 
 ## Verification
 
-The modern integration has **39 regression tests** covering command validation,
+The modern integration has **62 regression tests** covering command validation,
 batches, output verification, collision handling, interrupted downloads,
-cancellation, environment isolation, and packaged-app paths.
+cancellation, environment isolation, packaged-app paths, waveform math, audio
+transport, and studio session state.
 
 ```bash
 .venv-modern/bin/python -m unittest discover -s tests -v
 ```
 
 The tests need Python with Tkinter support but do not download models or require
-the ML stack. CI is configured to run the suite on Python 3.9 and 3.12; the
-modern runtime installer still requires Python 3.11 or newer.
+the ML stack. Real waveform tests also use NumPy and SoundFile, supplied by the
+modern runtime; they are skipped if those packages are absent. CI is configured
+to install the waveform test dependencies and run the suite on Python 3.9 and
+3.12. The modern runtime installer still requires Python 3.11 or newer.
 
 Manual checks completed for the Mac build:
 
 - A full 12-minute-28-second MP3 was separated with Kim FT2 using Apple MPS,
   native float16, overlap `2`, and WAV output. Both stems matched the input's
   duration, sample rate, and channel count, with finite audio and no clipping.
+- The studio transport opened real audio output, advanced playback while muted,
+  paused and sought, and populated all three waveform lanes after separation.
 - The installed app selected a file through the native picker, completed a GPU
   separation using its bundled runtime, wrote both stems, saved settings, and
   handled normal Mac Quit.
@@ -289,6 +370,11 @@ NVIDIA CUDA execution have not been manually verified in this modernization.
   window. Tcl/Tk is already included in the packaged app.
 - **Processing takes too long:** try overlap `2` and GPU float16 on a supported
   GPU. Forced CPU remains available but can take substantially longer.
+- **No preview sound:** confirm a loaded track is selected, monitor gain is above
+  zero, and the default system output device is available. Preview errors appear
+  in Activity; separation exports are independent of playback.
+- **A stem lane is empty:** run separation or use **Import stems** to attach
+  existing results to the selected original. Empty lanes contain no audio.
 - **One song stays at 0%:** the main progress bar counts completed files. Chunk
   progress appears in the live backend log; a per-song ETA is not implemented.
 - **An export seems to be missing:** check the input's output subfolder and the
@@ -296,9 +382,9 @@ NVIDIA CUDA execution have not been manually verified in this modernization.
 
 The modern window has its own **Cancel** button and does not run concurrently
 with a legacy separation launched from the same UVR window. It does not apply
-the legacy ensemble or secondary-model settings. Synchronized playback, short
-A/B previews, modern-model ensembles, and resuming within an interrupted song
-remain future work.
+the legacy ensemble or secondary-model settings. Short excerpt processing,
+modern-model ensembles, simultaneous multi-track mixing, and resuming within an
+interrupted separation remain future work.
 
 ## Original UVR and credits
 

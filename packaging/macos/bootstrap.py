@@ -45,6 +45,13 @@ def self_test():
     root.withdraw()
     root.update_idletasks()
     tk_version = root.tk.call("info", "patchlevel")
+    from gui_data.modern_models_dialog import ModernModelsDialog
+    window = ModernModelsDialog(root)
+    window.withdraw()
+    root.update_idletasks()
+    if not hasattr(window, "timeline") or not hasattr(window, "play_button"):
+        raise RuntimeError("Studio controls did not initialize.")
+    window.destroy()
     root.destroy()
     python = RUNTIME / "bin" / "python3.12"
     worker = APP_SOURCE / "modern_models.py"
@@ -64,7 +71,12 @@ def self_test():
         raise RuntimeError("The app loaded Python from outside its bundled runtime.")
     if Path(backend["python"]).resolve().parent != (RUNTIME / "bin").resolve():
         raise RuntimeError("The worker loaded Python from outside its bundled runtime.")
+    preview = subprocess.check_output(
+        [str(python), "-I", "-B", "-c", "import sounddevice; print(sounddevice.__version__)"],
+        text=True, timeout=30,
+    ).strip()
     print(json.dumps({
+        "audio_preview": preview,
         "available": True, "resources": str(RESOURCES),
         "python": sys.executable, "prefix": sys.prefix,
         "tk_version": tk_version, "backend": backend,

@@ -20,7 +20,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 APP_NAME = "UVR Modern"
 BUNDLE_ID = "local.uvr.modern"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 MACHO_MAGICS = {
     b"\xfe\xed\xfa\xce", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe",
     b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca", b"\xca\xfe\xba\xbf", b"\xbf\xba\xfe\xca",
@@ -100,8 +100,9 @@ def build_app(runtime_python, destination):
     ).strip()
     shutil.copy2(ffmpeg_source, runtime / "bin" / "ffmpeg")
     shutil.copy2(ROOT / "modern_models.py", source / "modern_models.py")
+    shutil.copy2(ROOT / "studio_audio.py", source / "studio_audio.py")
     (source / "gui_data").mkdir()
-    for filename in ("modern_models_dialog.py", "app_paths.py"):
+    for filename in ("modern_models_dialog.py", "app_paths.py", "studio_view.py", "studio_widgets.py"):
         shutil.copy2(ROOT / "gui_data" / filename, source / "gui_data" / filename)
     shutil.copy2(ROOT / "packaging" / "macos" / "bootstrap.py", resources / "bootstrap.py")
     shutil.copy2(ROOT / "gui_data" / "img" / "UVR.icns", resources / "UVR.icns")
