@@ -1,412 +1,323 @@
-- **DEVELOPMENT UPDATE - October 6th, 2026:**
-    - Please see the following issue for the latest UVR development update! - [Issue 2399](https://github.com/Anjok07/ultimatevocalremovergui/issues/2399)
+# UVR Modern
 
-# Ultimate Vocal Remover GUI v5.6
-<img src="https://raw.githubusercontent.com/Anjok07/ultimatevocalremovergui/master/gui_data/img/UVR_v5.6.png?raw=true" />
+Local audio separation with **BS-Roformer and Mel-Band Roformer**, a standalone
+Mac application, and a command-line worker. Extract vocals and instrumentals,
+prepare karaoke tracks, or use specialized denoise, dereverb, and instrument
+separation models.
 
-[![Release](https://img.shields.io/github/release/anjok07/ultimatevocalremovergui.svg)](https://github.com/anjok07/ultimatevocalremovergui/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/anjok07/ultimatevocalremovergui/total.svg)](https://github.com/anjok07/ultimatevocalremovergui/releases)
+This checkout extends [Ultimate Vocal Remover GUI 5.6](https://github.com/Anjok07/ultimatevocalremovergui)
+with an isolated modern engine powered by [audio-separator](https://github.com/nomadkaraoke/python-audio-separator).
+**UVR Modern 1.0.0** is the packaged modern-model window. The original interface
+and its VR, MDX-Net/MDX23C, and Demucs engines remain available through `UVR.py`.
 
-## About
+- [Use the Mac app](#use-the-mac-app)
+- [Model presets](#model-presets)
+- [Run from source](#run-from-source)
+- [Command line](#command-line)
+- [Build the Mac app](#build-the-mac-app)
+- [Files and settings](#files-and-settings)
+- [Verification](#verification)
+- [Troubleshooting and current limits](#troubleshooting-and-current-limits)
+- [Original UVR and credits](#original-uvr-and-credits)
 
-This application uses state-of-the-art source separation models to remove vocals from audio files. UVR's core developers trained all of the models provided in this package (except for the Demucs v3 and v4 4-stem models).
+## What has been added
 
-- **Core Developers**
-    - [Anjok07](https://github.com/anjok07)
-    - [aufr33](https://github.com/aufr33)
+- Eight model presets for vocals, instrumentals, karaoke, denoising, dereverb,
+  and six-stem separation, plus custom model filenames from the backend catalog.
+- A modern-model window that runs independently or opens from the original
+  interface via **Settings → Modern Models → Open Modern Models**.
+- Batch file selection and recursive audio-folder selection in the window.
+- WAV, FLAC, and MP3 exports, optional single-stem output, and overlap controls.
+- Automatic Apple MPS, NVIDIA CUDA, or CPU selection, with a forced CPU option.
+- Optional native float16 inference for supported Roformer GPU models.
+- Persistent model downloads, protected against interrupted transfers, and a
+  Cancel button that stops the worker and its child processes.
+- A fresh output subfolder for every input and run to avoid overwriting files.
+- A standalone Apple Silicon `.app` and drag-to-Applications `.dmg` builder.
+- Regression tests and CI for the worker, controller, and packaged-app paths.
 
-- **Support the Project**
-    - [Donate](https://www.buymeacoffee.com/uvr5)
+Audio separation runs locally. Internet access is used to retrieve the model
+catalog and any missing weights or configuration files. Some checkpoints require
+more than 1 GB of storage each.
 
-## Modern separation models (optional)
+## Use the Mac app
 
-This source checkout adds a **Modern Models** window alongside the original UVR
-engines, powered by [audio-separator](https://github.com/nomadkaraoke/python-audio-separator).
-Open **Settings → Modern Models → Open Modern Models**, or launch the window
-independently using the commands below. This is an extension to this checkout;
-the official UVR version remains 5.6.
+The packaged **UVR Modern.app** supports **Apple Silicon and macOS 14 or newer**.
+It includes Python 3.12, Tcl/Tk, the separation engine and its dependencies, and
+FFmpeg. It runs independently of this repository and its virtual environment.
 
-- **BS-Roformer and Mel-Band Roformer** presets for vocals, instrumental, karaoke,
-  denoising, dereverb, and multiple instrument stems.
-- Automatic checkpoint/configuration downloads into a persistent cache, plus
-  custom filenames from the backend's model catalog.
-- Batch files or recursive folders, WAV/FLAC/MP3 output, optional single-stem
-  export, overlap control, live logs, and cancellation.
-- Automatic CUDA / Apple MPS / CPU selection, or forced CPU processing.
-- Each input gets a fresh output subfolder, including repeated runs and files
-  with the same name, to prevent overwrites.
+1. Open a locally built `UVR-Modern-1.0.0-arm64.dmg` and drag **UVR Modern.app**
+   into **Applications**, or use the builder's `--install` option.
+2. Launch **UVR Modern** from Applications.
+3. Choose a preset and use **Add files…** or **Add folder…** to select audio.
+4. Choose an output folder and format, then click **Separate audio**.
+5. Read the saved paths in the log when processing completes.
 
-### Packaged Mac app
+**Download model only** caches a model before processing. On first use, weights
+and configuration files download automatically. Model weights are stored in your
+user Library, outside the app bundle, so they can be reused across app builds.
 
-**UVR Modern.app** packages the modern separation window, Python 3.12, the
-separation engine, Tcl/Tk, and FFmpeg in a standalone Mac application. This build
-supports **Apple Silicon and macOS 14 or newer**. Launch it from Applications;
-it does not need this checkout, a virtual environment, or Terminal.
+For a faster first pass on a supported GPU, set **Overlap** to `2` and enable
+**GPU float16** with **Device** set to `auto`. Float16 is optional; leaving overlap
+blank uses the model's configuration. Processing time and separation quality
+depend on the model, recording, hardware, and selected settings.
 
-The build produces `dist/UVR Modern.app` and optionally
-`dist/UVR-Modern-1.0.0-arm64.dmg`. The disk image supports dragging the app into
-Applications. Model weights download when selected and are kept outside the app:
+Build outputs are generated locally and ignored by Git:
 
-- Models: `~/Library/Application Support/UVRModern/models`
-- Preferences: `~/Library/Application Support/UVRModern/preferences.json`
-- Logs: `~/Library/Logs/UVRModern/app.log`
-- Default audio output: `~/Downloads/UVR Separated`
+| Artifact | Default path |
+| --- | --- |
+| Standalone application | `dist/UVR Modern.app` |
+| Optional disk image | `dist/UVR-Modern-1.0.0-arm64.dmg` |
+| Installed application with `--install` | `/Applications/UVR Modern.app` |
 
-To rebuild on an Apple Silicon Mac with Xcode Command Line Tools installed:
+See [Build the Mac app](#build-the-mac-app) to generate these artifacts. The
+upstream UVR download links distribute its own application, rather than this
+checkout's newly built app.
+
+This local build is **ad-hoc signed and not Apple-notarized**. Public distribution
+with notarization requires a Developer ID and a separate release-signing process.
+
+## Model presets
+
+| Preset ID | Model | Intended use |
+| --- | --- | --- |
+| `melband-vocals` | MelBand Roformer, Kim FT2 by unwa | Default vocal/instrumental separation |
+| `bs-vocals` | BS-Roformer by Viperx | Alternative vocal/instrumental separation |
+| `melband-viperx` | MelBand Roformer by Viperx | Alternative vocal/instrumental separation |
+| `melband-instrumental` | MelBand Roformer by becruily | Instrumental extraction |
+| `melband-karaoke` | MelBand Roformer by aufr33 / Viperx | Lead-vocal removal while retaining backing vocals |
+| `melband-denoise` | MelBand Roformer by aufr33 | Vocal or speech denoising |
+| `bs-dereverb` | BS-Roformer De-reverb | Reverb separation |
+| `bs-six-stem` | BS-Roformer SW by jarredou | Vocals, drums, bass, guitar, piano, and other |
+
+Use **Model filename** for another supported catalog entry. **Browse model
+catalog…** opens the external catalog; a searchable catalog inside the window
+has not been implemented. The CLI also provides `--list-models`.
+
+Output stem names depend on the model. With the default Kim FT2 preset,
+`(vocals)` is the vocal track and `(other)` is the instrumental track. The preset
+list describes available workflows; the full-song validation below used Kim FT2.
+
+## Run from source
+
+Use **Python 3.12** for the tested modern runtime. The installation helper accepts
+Python 3.11 or newer. Tkinter support is required for the window.
+
+Run commands from the repository root:
+
+```bash
+# Recommended with uv, including the relocatable runtime needed by the Mac builder
+uv run --python 3.12 scripts/install_modern.py
+
+# Alternatively, with an existing Python 3.12 installation on macOS / Linux
+python3.12 scripts/install_modern.py
+```
+
+On Windows:
+
+```powershell
+py -3.12 scripts/install_modern.py
+```
+
+The helper creates `.venv-modern`, installs the pinned dependencies, supplies
+FFmpeg, and checks the engine. The backend is pinned to **audio-separator 0.47.1**;
+[audioread](requirements-modern.txt) and the bundled FFmpeg dependency are also
+specified explicitly.
+
+Keep `.venv-modern` separate from the original `requirements.txt` environment:
+the modern engine uses newer NumPy, librosa, and PyTorch dependencies.
+
+Launch the window on macOS / Linux:
+
+```bash
+.venv-modern/bin/python -m gui_data.modern_models_dialog
+```
+
+On Windows:
+
+```powershell
+.venv-modern\Scripts\python.exe -m gui_data.modern_models_dialog
+```
+
+Source launches detect `.venv-modern` automatically. Select another Python
+executable in the window or set `UVR_MODERN_PYTHON` to use a different runtime.
+The packaged Mac app uses its bundled runtime and hides the interpreter controls.
+
+Apple Silicon uses MPS automatically when available. For NVIDIA ONNX acceleration
+on Windows/Linux, add `--gpu` to the setup command. A compatible CUDA-enabled
+PyTorch build is also needed for CUDA-based Roformer inference. The default CPU
+ONNX dependency does not disable PyTorch GPU acceleration.
+
+## Command line
+
+Examples use the macOS/Linux runtime path. On Windows, substitute
+`.venv-modern\Scripts\python.exe` for `.venv-modern/bin/python`.
+
+```bash
+# Check the environment and list presets or catalog models
+.venv-modern/bin/python modern_models.py --check
+.venv-modern/bin/python modern_models.py --list-presets
+.venv-modern/bin/python modern_models.py --list-models
+
+# Separate one file into WAV stems
+.venv-modern/bin/python modern_models.py --preset melband-vocals --output-dir separated "song.mp3"
+
+# Process multiple files with the same loaded model and faster GPU settings
+.venv-modern/bin/python modern_models.py --preset melband-vocals --native-fp16 --overlap 2 --output-dir separated "song one.mp3" "song two.flac"
+
+# Export only the vocals as FLAC
+.venv-modern/bin/python modern_models.py --preset melband-vocals --single-stem Vocals --output-format FLAC --output-dir separated "song.mp3"
+
+# Download a model and its configuration without inference
+.venv-modern/bin/python modern_models.py --preset bs-dereverb --download-only
+```
+
+The CLI accepts **file paths**; recursive folder expansion is provided by the
+window. Use `--` before input filenames beginning with `-`.
+
+| Option | Behavior |
+| --- | --- |
+| `--preset ID` | Select a bundled preset; defaults to `melband-vocals` |
+| `--model FILENAME` | Select another supported catalog filename instead of a preset |
+| `--output-dir PATH` | Output root; defaults to `modern_outputs` |
+| `--model-dir PATH` | Persistent model cache; defaults to `models/Modern_Models` in this checkout |
+| `--output-format WAV\|FLAC\|MP3` | Output format; defaults to WAV |
+| `--device auto\|cpu` | Automatic acceleration or forced CPU |
+| `--native-fp16` | Request native float16 on supported GPU models; ignored for forced CPU |
+| `--single-stem NAME` | Export only a stem supported by the selected model |
+| `--overlap 2..50` | Prediction overlap; omitting it uses the model configuration |
+| `--download-only` | Cache the selected model without processing audio |
+
+Each input gets its own output subfolder. Repeated names receive numbered
+folders, such as `song`, `song (2)`, and `song (3)`. Failed inputs are reported,
+remaining batch inputs are attempted, and any failures produce a nonzero exit
+status. Worker status and output paths are emitted as JSON lines on stdout;
+backend logs are written to stderr.
+
+## Build the Mac app
+
+Build on an **Apple Silicon Mac**, using a **relocatable uv-managed Python 3.12**
+runtime and **Xcode Command Line Tools**. Prepare the engine first:
+
+```bash
+uv run --python 3.12 scripts/install_modern.py
+
+# Build the app and a disk image, reusing already downloaded model files
+.venv-modern/bin/python scripts/build_macos.py --migrate-models --dmg
+```
+
+The builder copies the standalone Python runtime and installed engine, compiles
+a native Cocoa launcher, and signs the bundle. Its self-test checks the embedded
+GUI and the separate worker, then verifies the signature after execution.
+
+| Build option | Purpose |
+| --- | --- |
+| `--install` | Copy the verified app into Applications |
+| `--applications PATH` | Choose another installation directory when using `--install` |
+| `--migrate-models` | Copy existing checkout models into the user's app cache without overwriting cached files |
+| `--dmg` | Create the drag-to-Applications disk image |
+| `--dist PATH` | Choose a fresh build output directory |
+| `--runtime-python PATH` | Choose the installed modern Python runtime to package |
+
+For example, to build and install in one operation:
 
 ```bash
 .venv-modern/bin/python scripts/build_macos.py --install --migrate-models --dmg
 ```
 
-Run `scripts/install_modern.py` first if the runtime has not been installed.
-The builder copies a relocatable uv-managed Python 3.12 and its installed engine,
-compiles a native Cocoa launcher, signs the bundle, and checks its GUI/worker
-runtime and signature. `--migrate-models` reuses already downloaded model files.
-It preserves an existing application and build output; choose another `--dist`
-or `--applications` folder when rebuilding alongside an existing copy.
+Existing application, build, and disk-image destinations are preserved. For
+another build, choose a fresh `--dist` directory. To install alongside an existing
+app, also choose another `--applications` directory.
 
-This local build uses an ad-hoc signature. Public distribution with Apple
-notarization requires a Developer ID and a separate release-signing process.
+The app bundles its runtime and engine. Model weights are separate downloads;
+`--migrate-models` reuses weights already present in this checkout. Runtime package
+versions are recorded inside the app at `Contents/Resources/runtime-versions.txt`.
 
-### Install the isolated modern engine
+## Files and settings
 
-Use **Python 3.12** (3.11 or newer is required by the installation helper). Run
-from this repository:
+| Data | Packaged Mac app | Source window / CLI |
+| --- | --- | --- |
+| Model cache | `~/Library/Application Support/UVRModern/models` | `models/Modern_Models` |
+| Preferences | `~/Library/Application Support/UVRModern/preferences.json` | `~/.uvr/modern_models.json` for the window |
+| Application log | `~/Library/Logs/UVRModern/app.log` | Live window log or CLI stderr |
+| Default output | `~/Downloads/UVR Separated` | Window: `separated`; CLI: `modern_outputs` |
 
-```bash
-# macOS / Linux
-python3.12 scripts/install_modern.py
+The window allows different output and cache locations. Packaged-app preferences,
+model weights, logs, and generated caches are stored outside the signed bundle.
+The source window and packaged app use separate preference files.
 
-# Windows
-py -3.12 scripts/install_modern.py
-```
+## Verification
 
-If you use [uv](https://docs.astral.sh/uv/), the equivalent is
-`uv run --python 3.12 scripts/install_modern.py`.
-
-The helper creates `.venv-modern`, installs the pinned backend and a bundled
-FFmpeg, and checks the installation. Keep this environment separate from the
-original `requirements.txt`: the modern engine requires newer NumPy, librosa,
-and PyTorch versions. Apple Silicon uses MPS automatically; this backend's
-current PyTorch requirements need **macOS 14 or newer** on Apple Silicon.
-For NVIDIA ONNX acceleration on Windows/Linux, add `--gpu` to the installation
-command and install a compatible CUDA-enabled PyTorch build if needed. Roformer
-models use PyTorch; installing the CPU ONNX extra does not disable their GPU use.
-
-To launch the modern window without installing the old UVR dependencies:
+The modern integration has **39 regression tests** covering command validation,
+batches, output verification, collision handling, interrupted downloads,
+cancellation, environment isolation, and packaged-app paths.
 
 ```bash
-# macOS / Linux
-.venv-modern/bin/python -m gui_data.modern_models_dialog
-
-# Windows
-.venv-modern\Scripts\python.exe -m gui_data.modern_models_dialog
+.venv-modern/bin/python -m unittest discover -s tests -v
 ```
 
-The window detects `.venv-modern` automatically. For a different environment,
-select its Python executable in the window or set `UVR_MODERN_PYTHON`. Tkinter is
-needed by the window; install your platform's Python Tk support if it is missing.
-Preferences are saved in `~/.uvr/modern_models.json`.
-
-### Command line
-
-```bash
-.venv-modern/bin/python modern_models.py --list-presets
-.venv-modern/bin/python modern_models.py --list-models
-.venv-modern/bin/python modern_models.py --preset melband-vocals --output-dir separated song.wav
-.venv-modern/bin/python modern_models.py --preset bs-dereverb --download-only
-```
-
-Use `--model FILENAME` for another supported catalog model, `--device cpu` to
-force CPU processing, `--single-stem Vocals` to export only that stem, and
-`--output-format FLAC` or `MP3` for other formats. Stem names depend on the model.
-Leave overlap blank to use its trained configuration; higher values take longer.
-For a faster first pass on a supported Apple or NVIDIA GPU, use `--overlap 2`
-and `--native-fp16` (the window also offers a GPU float16 option). CPU mode
-keeps float32 precision.
-First use downloads the selected weights and configuration and can require over
-1 GB per model. Audio processing runs locally. Modern jobs have their own Cancel
-button and cannot run at the same time as a legacy UVR separation job. This
-window does not apply the legacy ensemble or secondary-model settings.
-
-Run the focused regression suite without installing the ML stack:
-
-```bash
-python3 -m unittest discover -s tests -v
-```
-
-## Installation
-
-These bundles contain the UVR interface, Python, PyTorch, and other dependencies needed to run the application effectively. No prerequisites are required.
-
-### Windows Installation
-
-- Please Note:
-    - This installer is intended for those running Windows 10 or higher. 
-    - Application functionality for systems running Windows 7 or lower is not guaranteed.
-    - Application functionality for Intel Pentium & Celeron CPUs systems is not guaranteed.
-    - You must install UVR to the main C:\ drive. Installing UVR to a secondary drive will cause instability.
-
-- Download the UVR installer for Windows via the link below:
-    - [Main Download Link](https://github.com/Anjok07/ultimatevocalremovergui/releases/download/v5.6/UVR_v5.6.0_setup.exe)
-    - [Main Download Link mirror](https://www.mediafire.com/file_premium/jiatpgp0ljou52p/UVR_v5.6.0_setup.exe/file)
-- If you use an **AMD Radeon or Intel Arc graphics card**, you can try the DirectML version:
-    - [DirectML Version - Main Download Link](https://github.com/Anjok07/ultimatevocalremovergui/releases/download/v5.6/UVR_1_15_25_22_30_BETA_full.exe)
-- Update Package instructions for those who have UVR already installed:
-    - If you already have UVR installed you can install this package over it or download it straight from the application or [click here for the patch](https://github.com/Anjok07/ultimatevocalremovergui/releases/download/v5.6/UVR_Patch_10_6_23_4_27.exe).
-
-<details id="WindowsManual">
-  <summary>Windows Manual Installation</summary>
-
-### Manual Windows Installation
-
-- Download and extract the repository [here](https://github.com/Anjok07/ultimatevocalremovergui/archive/refs/heads/master.zip)
-- Download and install Python [here](https://www.python.org/ftp/python/3.9.8/python-3.9.8-amd64.exe)
-   - Make sure to check "Add python.exe to PATH" during the install
-- Run the following commands from the extracted repo directory:
-
-```
-python.exe -m pip install -r requirements.txt
-```
-
-If you have a compatible Nvidia GPU, run the following command:
-
-```
-python.exe -m pip install --upgrade torch --extra-index-url https://download.pytorch.org/whl/cu117
-```
-
-If you do not have FFmpeg or Rubber Band installed and want to avoid going through the process of installing them the long way, follow the instructions below.
-
-**FFmpeg Installation**
-
-- Download the precompiled build [here](https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip)
-- From the archive, extract the following file to the UVR application directory:
-   - ```ffmpeg-5.1.2-essentials_build/bin/ffmpeg.exe```
-
-**Rubber Band Installation**
-
-In order to use the Time Stretch or Change Pitch tool, you'll need Rubber Band.
-
-- Download the precompiled build [here](https://breakfastquay.com/files/releases/rubberband-3.1.2-gpl-executable-windows.zip)
-- From the archive, extract the following files to the UVR application directory:
-   - ```rubberband-3.1.2-gpl-executable-windows/rubberband.exe```
-   - ```rubberband-3.1.2-gpl-executable-windows/sndfile.dll```
-
-</details>
-
-### MacOS Installation
-- Please Note:
-    - The MacOS Sonoma mouse clicking issue has been fixed.
-    - MPS (GPU) acceleration for Mac M1 has been expanded to work with Demucs v4 and all MDX-Net models.
-    - This bundle is intended for those running macOS Big Sur and above.
-    - Application functionality for systems running macOS Catalina or lower is not guaranteed.
-    - Application functionality for older or budget Mac systems is not guaranteed.
-    - Once everything is installed, the application may take up to 5-10 minutes to start for the first time (depending on your Macbook).
-
-- Download the UVR dmg for MacOS via one of the links below:
-    - Mac M1 (arm64) users:
-       - [Main Download Link](https://github.com/Anjok07/ultimatevocalremovergui/releases/download/v5.6/Ultimate_Vocal_Remover_v5_6_MacOS_arm64.dmg)
-       - [Main Download Link mirror](https://www.mediafire.com/file_premium/u3rk54wsqadpy93/Ultimate_Vocal_Remover_v5_6_MacOS_arm64.dmg/file)
-
-    - Mac Intel (x86_64) users:
-       - [Main Download Link](https://github.com/Anjok07/ultimatevocalremovergui/releases/download/v5.6/Ultimate_Vocal_Remover_v5_6_MacOS_x86_64.dmg)
-       - [Main Download Link mirror](https://www.mediafire.com/file_premium/2gf1werx5ly5ylz/Ultimate_Vocal_Remover_v5_6_MacOS_x86_64.dmg/file)
-
-<details id="CannotOpen">
-  <summary>MacOS Users: Having Trouble Opening UVR?</summary>
-
-> Due to Apples strict application security, you may need to follow these steps to open UVR.
->
-> First, run the following command via Terminal.app to allow applications to run from all sources (it's recommended that you re-enable this once UVR opens properly.)
-> 
-> ```bash
-> sudo spctl --master-disable
-> ```
-> 
-> Second, run the following command to bypass Notarization: 
-> 
-> ```bash
-> sudo xattr -rd com.apple.quarantine /Applications/Ultimate\ Vocal\ Remover.app
-> ```
-
-</details>
-
-<details id="MacInstall">
-  <summary>Manual MacOS Installation</summary>
-
-### Manual MacOS Installation
-
-- Download and save this repository [here](https://github.com/Anjok07/ultimatevocalremovergui/archive/refs/heads/master.zip)
-- Download and install Python 3.10 [here](https://www.python.org/ftp/python/3.10.9/python-3.10.9-macos11.pkg)
-- From the saved directory run the following - 
-
-```
-pip3 install -r requirements.txt
-```
-
-- If your Mac is running with an M1, please run the following command next. If not, skip this step. - 
-
-```
-cp /Library/Frameworks/Python.framework/Versions/3.10/lib/python3.10/site-packages/_soundfile_data/libsndfile_arm64.dylib /Library/Frameworks/Python.framework/Versions/3.10/lib/python3.10/site-packages/_soundfile_data/libsndfile.dylib
-```
-
-**FFmpeg Installation**
-
-- Once everything is done installing, download the correct FFmpeg binary for your system [here](http://www.osxexperts.net) and place it into the main application directory.
-
-**Rubber Band Installation**
-
-In order to use the Time Stretch or Change Pitch tool, you'll need Rubber Band.
-
-- Download the precompiled build [here](https://breakfastquay.com/files/releases/rubberband-3.1.2-gpl-executable-windows.zip)
-- From the archive, extract the following files to the UVR/lib_v5 application directory:
-   - ```rubberband-3.1.2-gpl-executable-macos/rubberband```
-
-This process has been tested on a MacBook Pro 2021 (using M1) and a MacBook Air 2017 and is confirmed to be working on both.
-
-</details>
-
-
-### Linux Installation (Updated Instructions)
-
-<details id="LinuxInstall">
-  <summary>See Linux Installation Instructions</summary>
-
-<br />
-
-**These installation instructions are for Debian & Arch-based Linux systems.**
-
----
-
-#### **Step 1: Download the Repository**
-- Download and save this repository from [GitHub](https://github.com/Anjok07/ultimatevocalremovergui/archive/refs/heads/master.zip).
-- Extract the downloaded file to a directory of your choice.
-
----
-
-#### **Step 2: Install Dependencies**
-Use the following commands based on your system type:
-
-**For Debian-based systems (Ubuntu, Mint, etc.):**
-```bash
-sudo apt update && sudo apt upgrade
-sudo apt-get install -y ffmpeg python3-pip python3-tk
-```
-
-**For Arch-based systems (EndeavourOS):**
-```bash
-sudo pacman -Syu
-sudo pacman -S ffmpeg python-pip tk
-```
-
----
-
-#### **Step 3: Set Up a Virtual Environment (Recommended)**
-Setting up a virtual environment (venv) ensures that the program's dependencies do not interfere with system-wide Python packages.
-
-1. **Navigate to the extracted repository directory:**
-   ```bash
-   cd /path/to/ultimatevocalremovergui
-   ```
-
-2. **Create a virtual environment:**
-   ```bash
-   python3 -m venv venv
-   ```
-
-3. **Activate the virtual environment:**
-   - For **Debian-based and Arch-based systems:**
-     ```bash
-     source venv/bin/activate
-     ```
-
-4. **Install dependencies in the virtual environment:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
----
-
-#### **Step 4: Run the Application**
-While the virtual environment is activated, start the application:
-```bash
-python UVR.py
-```
-
----
-
-#### **Important Notes**
-1. **Avoid Modifying System Files:**  
-   Previous instructions suggested deleting the `/usr/lib/python3.11/EXTERNALLY-MANAGED` file, which is dangerous and can break Python package management. Do **NOT** delete this file.
-
-2. **Why Use Virtual Environments?**  
-   Virtual environments isolate the program's dependencies, preventing conflicts with system Python packages. More information is available [here](https://stackoverflow.com/questions/75602063/pip-install-r-requirements-txt-is-failing-this-environment-is-externally-mana/75696359#75696359).
-
-3. **Known Issues and Discussions:**  
-   - [Issue #1578](https://github.com/Anjok07/ultimatevocalremovergui/issues/1578)  
-   - [Pull Request #1068](https://github.com/Anjok07/ultimatevocalremovergui/pull/1068)
-
----
-
-If you encounter issues, refer to the [GitHub Issues](https://github.com/Anjok07/ultimatevocalremovergui/issues) page for help. 
-
-</details>
-
-### Other Application Notes
-- Nvidia GTX 1060 6GB is the minimum requirement for GPU conversions.
-- Nvidia GPUs with at least 8GBs of V-RAM are recommended.
-- AMD Radeon GPU supported is limited at this time.
-   - There is currently a working branch for AMD GPU users [here](https://github.com/Anjok07/ultimatevocalremovergui/tree/v5.6-amd-gpu)
-- This application is only compatible with 64-bit platforms. 
-- This application relies on the Rubber Band library for the Time-Stretch and Pitch-Shift options.
-- This application relies on FFmpeg to process non-wav audio files.
-- The application will automatically remember your settings when closed.
-- Conversion times will significantly depend on your hardware. 
-- These models are computationally intensive. 
-
-### Performance:
-- Model load times are faster.
-- Importing/exporting audio files is faster.
-
-## Troubleshooting
-
-### Common Issues
-
-- If FFmpeg is not installed, the application will throw an error if the user attempts to convert a non-WAV file.
-- Memory allocation errors can usually be resolved by lowering the "Segment" or "Window" sizes.
-
-#### MacOS Sonoma Left-click Bug
-There's a known issue on MacOS Sonoma where left-clicks aren't registering correctly within the app. This was impacting all applications built with Tkinter on Sonoma and has since been resolved. Please download the latest version via the following link if you are still experiencing issues - [link](https://github.com/Anjok07/ultimatevocalremovergui/releases/tag/v5.6)
-
-This issue was being tracked [here](https://github.com/Anjok07/ultimatevocalremovergui/issues/840).
-
-### Issue Reporting
-
-Please be as detailed as possible when posting a new issue. 
-
-If possible, click the "Settings Button" to the left of the "Start Processing" button and click the "Error Log" button for detailed error information that can be provided to us.
-
-## License
-
-The **Ultimate Vocal Remover GUI** code is [MIT-licensed](LICENSE). 
-
-- **Please Note:** For all third-party application developers who wish to use our models, please honor the MIT license by providing credit to UVR and its developers.
-
-## Credits
-- [ZFTurbo](https://github.com/ZFTurbo) - Created & trained the weights for the new MDX23C models. 
-- [DilanBoskan](https://github.com/DilanBoskan) - Your contributions at the start of this project were essential to the success of UVR. Thank you!
-- [Bas Curtiz](https://www.youtube.com/user/bascurtiz) - Designed the official UVR logo, icon, banner, and splash screen.
-- [tsurumeso](https://github.com/tsurumeso) - Developed the original VR Architecture code. 
-- [Kuielab & Woosung Choi](https://github.com/kuielab) - Developed the original MDX-Net AI code. 
-- [Adefossez & Demucs](https://github.com/facebookresearch/demucs) - Developed the original Demucs AI code. 
-- [KimberleyJSN](https://github.com/KimberleyJensen) - Advised and aided the implementation of the training scripts for MDX-Net and Demucs. Thank you!
-- [Hv](https://github.com/NaJeongMo/Colab-for-MDX_B) - Helped implement chunks into the MDX-Net AI code. Thank you!
-
-## Contributing
-
-- For anyone interested in the ongoing development of **Ultimate Vocal Remover GUI**, please send us a pull request, and we will review it. 
-- This project is 100% open-source and free for anyone to use and modify as they wish. 
-- We only maintain the development and support for the **Ultimate Vocal Remover GUI** and the models provided. 
-
-## References
-- [1] Takahashi et al., "Multi-scale Multi-band DenseNets for Audio Source Separation", https://arxiv.org/pdf/1706.09588.pdf
+The tests need Python with Tkinter support but do not download models or require
+the ML stack. CI runs the regression suite on Python 3.9 and 3.12; the modern
+runtime installer still requires Python 3.11 or newer.
+
+Manual checks completed for the Mac build:
+
+- A full 12-minute-28-second MP3 was separated with Kim FT2 using Apple MPS,
+  native float16, overlap `2`, and WAV output. Both stems matched the input's
+  duration, sample rate, and channel count, with finite audio and no clipping.
+- The installed app selected a file through the native picker, completed a GPU
+  separation using its bundled runtime, wrote both stems, saved settings, and
+  handled normal Mac Quit.
+- The app passed its runtime self-test and signature verification after launch;
+  the DMG passed checksum verification.
+
+These checks validate this Mac build and workflow. They do not establish quality
+or performance rankings across every preset. Windows/Linux source launches and
+NVIDIA CUDA execution have not been manually verified in this modernization.
+
+## Troubleshooting and current limits
+
+- **App will not start:** inspect `~/Library/Logs/UVRModern/app.log`. The packaged
+  build targets Apple Silicon and macOS 14 or newer.
+- **Source runtime is missing or broken:** rerun `scripts/install_modern.py` with
+  Python 3.12 and run `modern_models.py --check` through `.venv-modern`.
+- **Tkinter is missing:** use a Python installation with Tk support for the source
+  window. Tcl/Tk is already included in the packaged app.
+- **Processing takes too long:** try overlap `2` and GPU float16 on a supported
+  GPU. Forced CPU remains available but can take substantially longer.
+- **One song stays at 0%:** the main progress bar counts completed files. Chunk
+  progress appears in the live backend log; a per-song ETA is not implemented.
+- **An export seems to be missing:** check the input's output subfolder and the
+  log. Stem names vary by model; Kim FT2 calls the instrumental stem `other`.
+
+The modern window has its own **Cancel** button and does not run concurrently
+with a legacy separation launched from the same UVR window. It does not apply
+the legacy ensemble or secondary-model settings. Synchronized playback, short
+A/B previews, modern-model ensembles, and resuming within an interrupted song
+remain future work.
+
+## Original UVR and credits
+
+The original `UVR.py` interface and its dependencies remain in this repository.
+Use its separate `requirements.txt` environment and consult the
+[upstream UVR documentation](https://github.com/Anjok07/ultimatevocalremovergui#installation)
+for the original Windows, macOS, and Linux application. The
+[upstream development announcement](https://github.com/Anjok07/ultimatevocalremovergui/issues/2399)
+provides context on the maintainer's UVR 6 work.
+
+Thanks to the original UVR developers [Anjok07](https://github.com/Anjok07) and
+[aufr33](https://github.com/aufr33), the
+[audio-separator maintainers](https://github.com/nomadkaraoke/python-audio-separator),
+and the model authors credited in the presets and backend catalog.
+
+Original project credits also include ZFTurbo (MDX23C), DilanBoskan, Bas Curtiz
+(UVR artwork), tsurumeso (VR Architecture), Kuielab and Woosung Choi (MDX-Net),
+Alexandre Défossez and the Demucs contributors, Kimberley Jensen, and Hv.
+
+- [Support UVR](https://www.buymeacoffee.com/uvr5)
+- [Upstream licensing information](https://github.com/Anjok07/ultimatevocalremovergui#license)
+- [Original paper: Multi-scale Multi-band DenseNets for Audio Source Separation](https://arxiv.org/pdf/1706.09588.pdf)
+
+Refer to the upstream licensing information and the bundled dependencies' license
+files for attribution and licensing terms. Model weights retain the terms
+provided by their authors.
